@@ -39,7 +39,7 @@
  * 4- Take into account that ComRobot::Write will block your task when serial buffer is full,
  *   time for internal buffer to flush
  * 
- * 5- Same behavior existe for ComMonitor::Write !
+ * 5- Same behavior exists for ComMonitor::Write !
  * 
  * 6- When you want to write something in terminal, use cout and terminate with endl and flush
  * 
@@ -415,3 +415,19 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
     return msg;
 }
 
+/**
+ * Every 500 ms, asks robot for battery level and sends it to monitor.
+ * @param 
+ * @return void
+ */
+void Tasks::SendBatteryLevel() {
+    // Synchronization barrier (waiting that all tasks are starting)
+    rt_sem_p(&sem_barrier, TM_INFINITE);
+    
+    rt_task_set_periodic(NULL, TM_NOW, 500000000);
+    while(1){
+        Message *msg = robot.GetBattery();
+        monitor.Write(msg);
+        rt_task_wait_period(NULL);
+    }
+}

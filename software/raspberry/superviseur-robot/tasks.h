@@ -99,6 +99,7 @@ private:
     int MSG_QUEUE_SIZE;
     RT_QUEUE q_messageToMon;
     
+    
     /**********************************************************************/
     /* Tasks' functions                                                   */
     /**********************************************************************/
@@ -131,6 +132,14 @@ private:
      * @brief Thread handling control of the robot.
      */
     void MoveTask(void *arg);
+    
+    /**
+     * Every 500 ms, asks robot for battery level and sends it to monitor.
+     * @param 
+     * @return void
+     */
+    void SendBatteryLevel();
+    
     
     /**********************************************************************/
     /* Queue services                                                     */
