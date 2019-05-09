@@ -123,6 +123,10 @@ void Tasks::Init() {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    if (err = rt_task_create(&th_battery, "th_battery", 0, PRIORITY_TMOVE, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
     cout << "Tasks created successfully" << endl << flush;
 
     /**************************************************************************************/
@@ -164,6 +168,10 @@ void Tasks::Run() {
         exit(EXIT_FAILURE);
     }
     if (err = rt_task_start(&th_move, (void(*)(void*)) & Tasks::MoveTask, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_start(&th_battery, (void(*)(void*)) & Tasks::GetBatteryLevel, this)) {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -415,19 +423,37 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
     return msg;
 }
 
+
+
+
+
 /**
  * Every 500 ms, asks robot for battery level and sends it to monitor.
  * @param 
  * @return void
  */
-void Tasks::SendBatteryLevel() {
+void Tasks::GetBatteryLevel() {
+    Message* battery_level;
+    int rs;
+    
     // Synchronization barrier (waiting that all tasks are starting)
     rt_sem_p(&sem_barrier, TM_INFINITE);
-    
     rt_task_set_periodic(NULL, TM_NOW, 500000000);
+    
     while(1){
-        Message *msg = robot.GetBattery();
-        monitor.Write(msg);
+        rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
+        rs = robotStarted;
+        rt_mutex_release(&mutex_robotStarted);
+        if (rs == 1) {
+            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+            // On crée un message de demande de niveau de batterie et l'envoie au robotet récupère la réponse.
+            battery_level = robot.Write(robot.GetBattery());            
+            rt_mutex_release(&mutex_robot);
+            // On affiche la réponse sur le moniteur.
+            WriteInQueue(&q_messageToMon, battery_level);
+        
+        }
+        
         rt_task_wait_period(NULL);
     }
 }

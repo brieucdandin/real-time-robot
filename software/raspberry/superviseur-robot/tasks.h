@@ -76,6 +76,7 @@ private:
     RT_TASK th_openComRobot;
     RT_TASK th_startRobot;
     RT_TASK th_move;
+    RT_TASK th_battery;
     
     /**********************************************************************/
     /* Mutex                                                              */
@@ -138,7 +139,7 @@ private:
      * @param 
      * @return void
      */
-    void SendBatteryLevel();
+    void GetBatteryLevel();
     
     
     /**********************************************************************/

@@ -157,7 +157,7 @@ Message *ComRobot::Write(Message* msg) {
 /**
  * Get a message from robot
  * @return Message currently received
- * @attention A message object is created (new) when receiving data from robot. You MUST remember to destroy is (delete) after use
+ * @attention A message object is created (new) when receiving data from robot. You MUST remember to destroy it (delete) after use
  * @attention Read method is blocking until a message is received
  * @warning Read is not thread safe : Do not call it in multiple tasks simultaneously
  */
@@ -343,7 +343,7 @@ void ComRobot::AddChecksum(string &s) {
  * Verify if checksum of an incoming answer from robot is valid, 
  * then remove checksum from incoming answer (if checksum is ok)
  * @param[in,out] s String containing incoming answer from robot
- * @return true is checksum is valid, false otherwise.
+ * @return true if checksum is valid, false otherwise.
  */
 bool ComRobot::VerifyChecksum(string &s) {
     unsigned char checksum = 0;
