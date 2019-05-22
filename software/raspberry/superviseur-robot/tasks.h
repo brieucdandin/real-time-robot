@@ -133,6 +133,31 @@ private:
      * @brief Thread handling control of the robot.
      */
     void MoveTask(void *arg);
+
+
+/*
+ * 
+ * =============== OUR TASKS ===============
+ * 
+ */
+
+
+// =============== MONITOR PART ===============
+
+    /**
+     * 
+     */
+    void server();
+    
+    /**
+     * 
+     */
+    void receiveFromMon();
+    
+    /**
+     * 
+     */
+    void sendToMon();
     
     /**
      * Every 500 ms, asks robot for battery level and sends it to monitor.
@@ -140,6 +165,43 @@ private:
      * @return void
      */
     void GetBatteryLevel();
+
+
+// =============== CAMERA PART ===============
+    
+    /**
+     * 
+     */
+    void startStopCam();
+    
+    /**
+     * 
+     */
+    void senArena();
+    
+    /**
+     * 
+     */
+    void sendImage();
+
+
+// =============== ROBOT PART ===============
+    
+    /**
+     * 
+     */
+    void monitoRobot();
+    
+    /**
+     * 
+     */
+    void comRobot();
+    
+    /**
+     * 
+     */
+    void move();
+    
     
     
     /**********************************************************************/
