@@ -73,6 +73,14 @@ void Tasks::Init() {
         cerr << "Error mutex create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    if (err = rt_mutex_create(&mutex_cameraStarted, NULL)) {
+        cerr << "Error mutex create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_mutex_create(&mutex_camera, NULL)) {
+        cerr << "Error mutex create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
     cout << "Mutexes created successfully" << endl << flush;
 
     /**************************************************************************************/
@@ -91,6 +99,14 @@ void Tasks::Init() {
         exit(EXIT_FAILURE);
     }
     if (err = rt_sem_create(&sem_startRobot, NULL, 0, S_FIFO)) {
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_sem_create(&sem_startCamera, NULL, 0, S_FIFO)) {
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_sem_create(&sem_openComCamera, NULL, 0, S_FIFO)) {
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -459,7 +475,7 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
 
 /**
  * Every 500 ms, asks robot for battery level and sends it to monitor.
- * @param 
+ * @param void
  * @return void
  */
 void Tasks::GetBatteryLevel() {
@@ -491,30 +507,56 @@ void Tasks::GetBatteryLevel() {
 
 // =============== CAMERA PART ===============
 
-/**
- * 
+/*
+ * Unused mutex:
+ *      mutex_cameraStarted
+ *      mutex_camera
+ * Unused semaphores:
+ *      sem_startCamera
+ *      sem_openComCamera
+ */
+
+/**TODO
+ * Starts the camera; then wait for instruction from monitor to switch it off.
+ * @param void
+ * @return void
  */
 void Tasks::StartStopCam() {
-    // True if in start phase; False if in stop phase.
-    bool start = True;
-    bool cameraOpenned = False;
-    while(start){
-        cameraOpenned = Camera.IsOpen();
-        cameraOpenned = Camera.Open();
-        start = -cameraOpenned;
-    }
+    // True if on; false if off
+    bool camera_status = False;
     
+    // Synchronization barrier (waiting that all tasks are starting)
+    rt_sem_p(&sem_barrier, TM_INFINITE);
+    rt_task_set_periodic(NULL, TM_NOW, 100000000);
+    
+    while(!camera_status){
+        camera_status = Camera.Open();
+    }
+    Message* camera_status_on;
+    SendToMon(camera_status_on);
+    
+    stop = ReceiveFromMon(stop_camera);
+    while(camera_status){
+        Camera.Close();
+        camera_status = -Camera.IsOpen();
+    }
+    Message* camera_status_off;
+    SendToMon(camera_status_off);
 }
 
-/**
+/**TODO
  * 
+ * @param void
+ * @return void
  */
 void Tasks::SendArena() {
     
 }
 
-/**
- * 
+/**TODO
+ * Periodicaly retrieves snapshots from the camera and places it in a public memory space.
+ * @param void
+ * @return void
  */
 void Tasks::SendImage() {
     

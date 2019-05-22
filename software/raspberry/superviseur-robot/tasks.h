@@ -76,6 +76,7 @@ private:
     RT_TASK th_openComRobot;
     RT_TASK th_startRobot;
     RT_TASK th_move;
+    // Created by us
     RT_TASK th_battery;
     RT_TASK th_startStopCam;
     RT_TASK th_sendArena;
@@ -88,6 +89,9 @@ private:
     RT_MUTEX mutex_robot;
     RT_MUTEX mutex_robotStarted;
     RT_MUTEX mutex_move;
+    // Created by us
+    RT_MUTEX mutex_cameraStarted;
+    RT_MUTEX mutex_camera;
 
     /**********************************************************************/
     /* Semaphores                                                         */
@@ -96,6 +100,9 @@ private:
     RT_SEM sem_openComRobot;
     RT_SEM sem_serverOk;
     RT_SEM sem_startRobot;
+    // Created by us
+    RT_SEM sem_startCamera;
+    RT_SEM sem_openComCamera;
 
     /**********************************************************************/
     /* Message queues                                                     */
@@ -144,7 +151,7 @@ private:
     
     /**
      * Every 500 ms, asks robot for battery level and sends it to monitor.
-     * @param 
+     * @param void
      * @return void
      */
     void GetBatteryLevel();
@@ -152,7 +159,9 @@ private:
 // =============== CAMERA PART ===============
     
     /**
-     * 
+     * Starts the camera; then wait for instruction from monitor to switch it off.
+     * @param void
+     * @return void
      */
     void StartStopCam();
     
@@ -162,7 +171,9 @@ private:
     void SendArena();
     
     /**
-     * 
+     * Periodicaly retrieves snapshots from the camera and places it in a public memory space.
+     * @param void
+     * @return void
      */
     void SendImage();
 
