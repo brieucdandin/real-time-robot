@@ -424,7 +424,15 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
 }
 
 
+/*
+ * 
+ * =============== OUR TASKS ===============
+ * 
+ */
 
+/*
+ * =============== MONITOR PART ===============
+ */
 
 
 /**
@@ -457,3 +465,21 @@ void Tasks::GetBatteryLevel() {
         rt_task_wait_period(NULL);
     }
 }
+
+
+/*
+ * =============== CAMERA PART ===============
+ */
+
+
+/**
+ * 
+ */
+void Tasks::monitorCam() {
+    
+}
+
+
+/*
+ * =============== ROBOT PART ===============
+ */
