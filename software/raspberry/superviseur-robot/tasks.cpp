@@ -434,7 +434,6 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
  * =============== MONITOR PART ===============
  */
 
-
 /**
  * Every 500 ms, asks robot for battery level and sends it to monitor.
  * @param 
@@ -471,7 +470,6 @@ void Tasks::GetBatteryLevel() {
  * =============== CAMERA PART ===============
  */
 
-
 /**
  * 
  */
@@ -479,7 +477,42 @@ void Tasks::monitorCam() {
     
 }
 
+/**
+ * 
+ */
+void Tasks::sendArena() {
+    
+}
+
+/**
+ * 
+ */
+void Tasks::sendArena() {
+    
+}
+
 
 /*
  * =============== ROBOT PART ===============
  */
+
+/**
+ * 
+ */
+void Tasks::monitorRobot() {
+    
+}
+
+/**
+ * 
+ */
+void Tasks::comRobot() {
+    
+}
+
+/**
+ * 
+ */
+void Tasks::move() {
+    
+}
