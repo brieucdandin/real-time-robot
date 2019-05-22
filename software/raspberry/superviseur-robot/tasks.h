@@ -77,6 +77,9 @@ private:
     RT_TASK th_startRobot;
     RT_TASK th_move;
     RT_TASK th_battery;
+    RT_TASK th_startStopCam;
+    RT_TASK th_sendArena;
+    RT_TASK th_sendImage;
     
     /**********************************************************************/
     /* Mutex                                                              */
@@ -135,29 +138,9 @@ private:
     void MoveTask(void *arg);
 
 
-/*
- * 
- * =============== OUR TASKS ===============
- * 
- */
-
+// =============== OUR TASKS ===============
 
 // =============== MONITOR PART ===============
-
-    /**
-     * 
-     */
-    void server();
-    
-    /**
-     * 
-     */
-    void receiveFromMon();
-    
-    /**
-     * 
-     */
-    void sendToMon();
     
     /**
      * Every 500 ms, asks robot for battery level and sends it to monitor.
@@ -166,41 +149,24 @@ private:
      */
     void GetBatteryLevel();
 
-
 // =============== CAMERA PART ===============
     
     /**
      * 
      */
-    void startStopCam();
+    void StartStopCam();
     
     /**
      * 
      */
-    void senArena();
+    void SendArena();
     
     /**
      * 
      */
-    void sendImage();
-
+    void SendImage();
 
 // =============== ROBOT PART ===============
-    
-    /**
-     * 
-     */
-    void monitoRobot();
-    
-    /**
-     * 
-     */
-    void comRobot();
-    
-    /**
-     * 
-     */
-    void move();
     
     
     

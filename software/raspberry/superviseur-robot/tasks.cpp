@@ -127,6 +127,18 @@ void Tasks::Init() {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    if (err = rt_task_create(&th_startStopCam, "th_startStopCam", 0, PRIORITY_TMOVE, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_create(&th_sendArena, "th_sendArena", 0, PRIORITY_TMOVE, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_create(&th_sendImage, "th_sendImage", 0, PRIORITY_TMOVE, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
     cout << "Tasks created successfully" << endl << flush;
 
     /**************************************************************************************/
@@ -172,6 +184,18 @@ void Tasks::Run() {
         exit(EXIT_FAILURE);
     }
     if (err = rt_task_start(&th_battery, (void(*)(void*)) & Tasks::GetBatteryLevel, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_start(&th_startStopCam, (void(*)(void*)) & Tasks::StartStopCam, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_start(&th_sendArena, (void(*)(void*)) & Tasks::SendArena, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_start(&th_sendImage, (void(*)(void*)) & Tasks::SendImage, this)) {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -434,27 +458,6 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
 // =============== MONITOR PART ===============
 
 /**
- * 
- */
-void Tasks::server() {
-    
-}
-
-/**
- * 
- */
-void Tasks::receiveFromMon() {
-    
-}
-
-/**
- * 
- */
-void Tasks::sendToMon() {
-    
-}
-
-/**
  * Every 500 ms, asks robot for battery level and sends it to monitor.
  * @param 
  * @return void
@@ -473,10 +476,10 @@ void Tasks::GetBatteryLevel() {
         rt_mutex_release(&mutex_robotStarted);
         if (rs == 1) {
             rt_mutex_acquire(&mutex_robot, TM_INFINITE);
-            // On crée un message de demande de niveau de batterie et l'envoie au robotet récupère la réponse.
+            // A message to ask for battery level update is created and sent to the robot.
             battery_level = robot.Write(robot.GetBattery());            
             rt_mutex_release(&mutex_robot);
-            // On affiche la réponse sur le moniteur.
+            // The answer is printed on the monitor.
             WriteInQueue(&q_messageToMon, battery_level);
         
         }
@@ -491,44 +494,31 @@ void Tasks::GetBatteryLevel() {
 /**
  * 
  */
-void Tasks::startStopCam() {
+void Tasks::StartStopCam() {
+    // True if in start phase; False if in stop phase.
+    bool start = True;
+    bool cameraOpenned = False;
+    while(start){
+        cameraOpenned = Camera.IsOpen();
+        cameraOpenned = Camera.Open();
+        start = -cameraOpenned;
+    }
     
 }
 
 /**
  * 
  */
-void Tasks::sendArena() {
+void Tasks::SendArena() {
     
 }
 
 /**
  * 
  */
-void Tasks::sendImage() {
+void Tasks::SendImage() {
     
 }
 
 
 // =============== ROBOT PART ===============
-
-/**
- * 
- */
-void Tasks::monitorRobot() {
-    
-}
-
-/**
- * 
- */
-void Tasks::comRobot() {
-    
-}
-
-/**
- * 
- */
-void Tasks::move() {
-    
-}
