@@ -65,12 +65,14 @@ private:
     ComMonitor monitor;
     ComRobot robot;
     Camera camera;
+
     int robotStarted = 0;
     int move = MESSAGE_ROBOT_STOP;
     // True if on; false if off
     bool camera_status_effective = false;
     bool camera_status_wanted = false;
     int send_image = 0;
+    Image img = new Image();
 
     /**********************************************************************/
     /* Tasks                                                              */

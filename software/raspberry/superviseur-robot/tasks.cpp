@@ -526,9 +526,10 @@ void Tasks::GetBatteryLevel() {
 
 /**TO TEST
  * Starts the camera; then wait for instruction from monitor to switch it off.
- * @note MESSAGE_ANSWER_ACK is send to the monitor only once the camera has been effectively switched ON/OFF.
+ *
  * @param void
  * @return void
+ * @note MESSAGE_ANSWER_ACK is send to the monitor only once the camera has been effectively switched ON/OFF.
  */
 void Tasks::StartStopCam() {
     Message* msgSend = new Message();
@@ -557,7 +558,7 @@ void Tasks::StartStopCam() {
             } else {
                 msgSend = new Message(MESSAGE_ANSWER_NACK);
             }
-            cout << "Notifying monitor (" << msgSend->GetID() << ")." << endl << flush;
+            cout << "Notifying monitor (" << msgSend->GetID() << ")." << flush;
             rt_mutex_acquire(&mutex_cameraStarted, TM_INFINITE);
             WriteInQueue(&q_messageToMon, msgSend); // msgSend will be deleted by sendToMon
             rt_mutex_release(&mutex_cameraStarted);
@@ -578,7 +579,7 @@ void Tasks::StartStopCam() {
             } else {
                 msgSend = new Message(MESSAGE_ANSWER_NACK);
             }
-            cout << "Notifying monitor (" << msgSend->GetID() << ")." << endl << flush;
+            cout << "Notifying monitor (" << msgSend->GetID() << ")." << flush;
             rt_mutex_acquire(&mutex_cameraStarted, TM_INFINITE);
             WriteInQueue(&q_messageToMon, msgSend); // msgSend will be deleted by sendToMon
             rt_mutex_release(&mutex_cameraStarted);
@@ -588,14 +589,14 @@ void Tasks::StartStopCam() {
         // When the camera is already in the state asked for, the supervisor sends back ACK.
         else if( (camera_status_effective && camera_status_wanted) ||
                     (!camera_status_effective && !camera_status_wanted) ) {
-            cout << "Camera is already in the desired state." << endl << flush;
+            cout << "Camera is already in the desired state." << flush;
             Message* msgSend = new Message(MESSAGE_ANSWER_ACK);
             cout << "Monitor notified." << endl << flush;
         }
 
         // Else: communication error
         else {
-            cout << "Communication error: received message that is not MESSAGE_CAM_OPEN nor MESSAGE_CAM_CLOSE." << endl << flush;
+            cout << "Communication error: received message that is not MESSAGE_CAM_OPEN nor MESSAGE_CAM_CLOSE." << flush;
             Message* msgSend = new Message(MESSAGE_ANSWER_COM_ERROR);
             cout << "Monitor notified." << endl << flush;
         }
@@ -626,7 +627,7 @@ void Tasks::SendImage() {
         } else {
             rt_sem_p(&sem_openComCamera, TM_INFINITE);
             cout << "Ask for image..." << flush;
-            Image img = camera.Grab();
+            img = camera.Grab();
             cout << " Image received." << endl << flush;
         }
         // Wait for period
