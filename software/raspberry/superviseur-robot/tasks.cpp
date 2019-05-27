@@ -31,23 +31,23 @@
  * Some remarks:
  * 1- This program is mostly a template. It shows you how to create tasks, semaphore
  *   message queues, mutex ... and how to use them
- * 
+ *
  * 2- semDumber is, as name say, useless. Its goal is only to show you how to use semaphore
- * 
+ *
  * 3- Data flow is probably not optimal
- * 
+ *
  * 4- Take into account that ComRobot::Write will block your task when serial buffer is full,
  *   time for internal buffer to flush
- * 
+ *
  * 5- Same behavior exists for ComMonitor::Write !
- * 
+ *
  * 6- When you want to write something in terminal, use cout and terminate with endl and flush
- * 
+ *
  * 7- Good luck !
  */
 
 /**
- * @brief Initialisation des structures de l'application (tâches, mutex, 
+ * @brief Initialisation des structures de l'application (tâches, mutex,
  * semaphore, etc.)
  */
 void Tasks::Init() {
@@ -240,7 +240,7 @@ void Tasks::Join() {
  */
 void Tasks::ServerTask(void *arg) {
     int status;
-    
+
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     // Synchronization barrier (waiting that all tasks are started)
     rt_sem_p(&sem_barrier, TM_INFINITE);
@@ -267,7 +267,7 @@ void Tasks::ServerTask(void *arg) {
  */
 void Tasks::SendToMonTask(void* arg) {
     Message *msg;
-    
+
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     // Synchronization barrier (waiting that all tasks are starting)
     rt_sem_p(&sem_barrier, TM_INFINITE);
@@ -292,11 +292,11 @@ void Tasks::SendToMonTask(void* arg) {
  */
 void Tasks::ReceiveFromMonTask(void *arg) {
     Message *msgRcv;
-    
+
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     // Synchronization barrier (waiting that all tasks are starting)
     rt_sem_p(&sem_barrier, TM_INFINITE);
-    
+
     /**************************************************************************************/
     /* The task receiveFromMon starts here                                                */
     /**************************************************************************************/
@@ -342,7 +342,7 @@ void Tasks::OpenComRobot(void *arg) {
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     // Synchronization barrier (waiting that all tasks are starting)
     rt_sem_p(&sem_barrier, TM_INFINITE);
-    
+
     /**************************************************************************************/
     /* The task openComRobot starts here                                                  */
     /**************************************************************************************/
@@ -372,7 +372,7 @@ void Tasks::StartRobotTask(void *arg) {
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     // Synchronization barrier (waiting that all tasks are starting)
     rt_sem_p(&sem_barrier, TM_INFINITE);
-    
+
     /**************************************************************************************/
     /* The task startRobot starts here                                                    */
     /**************************************************************************************/
@@ -404,11 +404,11 @@ void Tasks::StartRobotTask(void *arg) {
 void Tasks::MoveTask(void *arg) {
     int rs;
     int cpMove;
-    
+
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     // Synchronization barrier (waiting that all tasks are starting)
     rt_sem_p(&sem_barrier, TM_INFINITE);
-    
+
     /**************************************************************************************/
     /* The task starts here                                                               */
     /**************************************************************************************/
@@ -424,9 +424,9 @@ void Tasks::MoveTask(void *arg) {
             rt_mutex_acquire(&mutex_move, TM_INFINITE);
             cpMove = move;
             rt_mutex_release(&mutex_move);
-            
+
             cout << " move: " << cpMove;
-            
+
             rt_mutex_acquire(&mutex_robot, TM_INFINITE);
             robot.Write(new Message((MessageID)cpMove));
             rt_mutex_release(&mutex_robot);
@@ -469,9 +469,9 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
 
 
 /*
- * 
+ *
  * =============== OUR TASKS ===============
- * 
+ *
  */
 
 
@@ -485,30 +485,29 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
 void Tasks::GetBatteryLevel() {
     Message* battery_level;
     int rs;
-    
+
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     // Synchronization barrier (waiting that all tasks are starting)
     rt_sem_p(&sem_barrier, TM_INFINITE);
     rt_task_set_periodic(NULL, TM_NOW, 500000000);
-    
+
     /**************************************************************************************/
     /* The task starts here                                                               */
     /**************************************************************************************/
-    
-    while(1){
+
+    while(1) {
         rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
         rs = robotStarted;
         rt_mutex_release(&mutex_robotStarted);
         if (rs == 1) {
             rt_mutex_acquire(&mutex_robot, TM_INFINITE);
             // A message to ask for battery level update is created and sent to the robot.
-            battery_level = robot.Write(robot.GetBattery());            
+            battery_level = robot.Write(robot.GetBattery());
             rt_mutex_release(&mutex_robot);
             // The answer is printed on the monitor.
             WriteInQueue(&q_messageToMon, battery_level);
-        
         }
-        
+        // Wait for period
         rt_task_wait_period(NULL);
     }
 }
@@ -532,73 +531,75 @@ void Tasks::GetBatteryLevel() {
  * @return void
  */
 void Tasks::StartStopCam() {
-    // True if on; false if off
-    bool camera_status_effective = false;
     Message* msgSend = new Message();
-    
+
     cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     // Synchronization barrier (waiting that all tasks are starting)
     rt_sem_p(&sem_barrier, TM_INFINITE);
     // Every quarter of second
     rt_task_set_periodic(NULL, TM_NOW, 250000000);
-    
+
     /**************************************************************************************/
     /* The task starts here                                                               */
     /**************************************************************************************/
-    
-    while(1){                
+
+    while(1) {
         // Start camera
-        if(!camera_status_effective && camera_status_wanted){
+        if(!camera_status_effective && camera_status_wanted) {
             // Starting the camera
-            cout << "Start camera...";
+            cout << "Start camera..." << flush;
             rt_sem_p(&sem_startCamera, TM_INFINITE);
             camera_status_effective = camera.Open();
-            cout << " Camera started." << endl;
+            cout << " Camera started." << endl << flush;
             // Notifying monitor about camera status
-            if(camera_status_effective){
+            if(camera_status_effective) {
                 msgSend = new Message(MESSAGE_ANSWER_ACK);
             } else {
                 msgSend = new Message(MESSAGE_ANSWER_NACK);
             }
-            cout << "Notifying monitor (" << msgSend->GetID() << ")." << endl;
+            cout << "Notifying monitor (" << msgSend->GetID() << ")." << endl << flush;
             rt_mutex_acquire(&mutex_cameraStarted, TM_INFINITE);
             WriteInQueue(&q_messageToMon, msgSend); // msgSend will be deleted by sendToMon
             rt_mutex_release(&mutex_cameraStarted);
-            cout << "Monitor notified." << endl;
+            cout << "Monitor notified." << endl << flush;
         }
-        
+
         // Stop camera
-        else if(camera_status_effective && !camera_status_wanted){
+        else if(camera_status_effective && !camera_status_wanted) {
             // Stopping the camera
-            cout << "Stop camera...";
+            cout << "Stopping camera..." << flush;
             camera.Close();
             camera_status_effective = -camera.IsOpen();
             camera_status_effective = camera.Open();
-            cout << " Camera stopped." << endl;
+            cout << " Camera stopped." << endl << flush;
             // Notifying monitor about camera status
-            if(!camera_status_effective){
+            if(!camera_status_effective) {
                 msgSend = new Message(MESSAGE_ANSWER_ACK);
             } else {
                 msgSend = new Message(MESSAGE_ANSWER_NACK);
             }
-            cout << "Notifying monitor (" << msgSend->GetID() << ")." << endl;
+            cout << "Notifying monitor (" << msgSend->GetID() << ")." << endl << flush;
             rt_mutex_acquire(&mutex_cameraStarted, TM_INFINITE);
             WriteInQueue(&q_messageToMon, msgSend); // msgSend will be deleted by sendToMon
             rt_mutex_release(&mutex_cameraStarted);
-            cout << "Monitor notified." << endl;
+            cout << "Monitor notified." << endl << flush;
         }
-        
+
         // When the camera is already in the state asked for, the supervisor sends back ACK.
         else if( (camera_status_effective && camera_status_wanted) ||
-                    (!camera_status_effective && !camera_status_wanted) ){
+                    (!camera_status_effective && !camera_status_wanted) ) {
+            cout << "Camera is already in the desired state." << endl << flush;
             Message* msgSend = new Message(MESSAGE_ANSWER_ACK);
+            cout << "Monitor notified." << endl << flush;
         }
-        
+
         // Else: communication error
-        else{
+        else {
+            cout << "Communication error: received message that is not MESSAGE_CAM_OPEN nor MESSAGE_CAM_CLOSE." << endl << flush;
             Message* msgSend = new Message(MESSAGE_ANSWER_COM_ERROR);
+            cout << "Monitor notified." << endl << flush;
         }
-        
+        // Wait for period
         rt_task_wait_period(NULL);
     }
 }
@@ -614,18 +615,30 @@ void Tasks::SendImage() {
     rt_sem_p(&sem_barrier, TM_INFINITE);
     // 4 images per second
     rt_task_set_periodic(NULL, TM_NOW, 250000000);
-    
+
     /**************************************************************************************/
     /* The task starts here                                                               */
     /**************************************************************************************/
-    
+
+    while (1) {
+        if(!camera.IsOpen()) {
+            camera_status_effective = false;
+        } else {
+            rt_sem_p(&sem_openComCamera, TM_INFINITE);
+            cout << "Ask for image..." << flush;
+            Image img = camera.Grab();
+            cout << " Image received." << endl << flush;
+        }
+        // Wait for period
+        rt_task_wait_period(NULL);
+    }
 }
 
 /**TODO
- * 
+ *
  * @param void
  * @return void
  */
 void Tasks::SendArena() {
-    
+
 }

@@ -52,12 +52,12 @@ public:
      * @brief Stops tasks
      */
     void Stop();
-    
+
     /**
      * @brief Suspends main thread
      */
     void Join();
-    
+
 private:
     /**********************************************************************/
     /* Shared data                                                        */
@@ -67,9 +67,11 @@ private:
     Camera camera;
     int robotStarted = 0;
     int move = MESSAGE_ROBOT_STOP;
+    // True if on; false if off
+    bool camera_status_effective = false;
     bool camera_status_wanted = false;
     int send_image = 0;
-    
+
     /**********************************************************************/
     /* Tasks                                                              */
     /**********************************************************************/
@@ -84,7 +86,7 @@ private:
     RT_TASK th_startStopCam;
     RT_TASK th_sendArena;
     RT_TASK th_sendImage;
-    
+
     /**********************************************************************/
     /* Mutex                                                              */
     /**********************************************************************/
@@ -112,8 +114,8 @@ private:
     /**********************************************************************/
     int MSG_QUEUE_SIZE;
     RT_QUEUE q_messageToMon;
-    
-    
+
+
     /**********************************************************************/
     /* Tasks' functions                                                   */
     /**********************************************************************/
@@ -121,17 +123,17 @@ private:
      * @brief Thread handling server communication with the monitor.
      */
     void ServerTask(void *arg);
-     
+
     /**
      * @brief Thread sending data to monitor.
      */
     void SendToMonTask(void *arg);
-        
+
     /**
      * @brief Thread receiving data from monitor.
      */
     void ReceiveFromMonTask(void *arg);
-    
+
     /**
      * @brief Thread opening communication with the robot.
      */
@@ -141,7 +143,7 @@ private:
      * @brief Thread starting the communication with the robot.
      */
     void StartRobotTask(void *arg);
-    
+
     /**
      * @brief Thread handling control of the robot.
      */
@@ -151,7 +153,7 @@ private:
 // =============== OUR TASKS ===============
 
 // =============== MONITOR PART ===============
-    
+
     /**
      * Every 500 ms, asks robot for battery level and sends it to monitor.
      * @param void
@@ -160,7 +162,7 @@ private:
     void GetBatteryLevel();
 
 // =============== CAMERA PART ===============
-    
+
     /**
      * Starts the camera; then wait for instruction from monitor to switch it off.
      * @note MESSAGE_ANSWER_ACK is send to the monitor only once the camera has been effectively switched ON/OFF.
@@ -168,23 +170,23 @@ private:
      * @return void
      */
     void StartStopCam();
-    
+
     /**
      * Periodicaly retrieves snapshots from the camera and places it in a public memory space.
      * @param void
      * @return void
      */
     void SendImage();
-    
+
     /**
-     * 
+     *
      */
     void SendArena();
 
 // =============== ROBOT PART ===============
-    
-    
-    
+
+
+
     /**********************************************************************/
     /* Queue services                                                     */
     /**********************************************************************/
@@ -194,7 +196,7 @@ private:
      * @param msg Message to be stored
      */
     void WriteInQueue(RT_QUEUE *queue, Message *msg);
-    
+
     /**
      * Read a message from a given queue, block if empty
      * @param queue Queue identifier
@@ -204,5 +206,4 @@ private:
 
 };
 
-#endif // __TASKS_H__ 
-
+#endif // __TASKS_H__
