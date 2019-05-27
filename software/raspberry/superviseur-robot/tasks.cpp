@@ -523,25 +523,30 @@ void Tasks::GetBatteryLevel() {
  */
 void Tasks::StartStopCam() {
     // True if on; false if off
-    bool camera_status = False;
+    bool camera_status_effective = False;
+    bool camera_status_wanted = True;
     
     // Synchronization barrier (waiting that all tasks are starting)
     rt_sem_p(&sem_barrier, TM_INFINITE);
     rt_task_set_periodic(NULL, TM_NOW, 100000000);
     
-    while(!camera_status){
-        camera_status = Camera.Open();
-    }
-    Message* camera_status_on;
-    SendToMon(camera_status_on);
-    
-    stop = ReceiveFromMon(stop_camera);
-    while(camera_status){
+    while(1){
+        if(camera_status_effective = False && camera_status_wanted = True){
+            camera_status_effective = Camera.Open();
+        }
+        
+        Message* camera_status_on;
+        
+        SendToMon(camera_status_on);
+        
+        
+        camera_status_wanted = ReceiveFromMon(stop_camera);
         Camera.Close();
-        camera_status = -Camera.IsOpen();
+        camera_status_effective = -Camera.IsOpen();
+        
+        Message* camera_status_off;
+        SendToMon(camera_status_off);
     }
-    Message* camera_status_off;
-    SendToMon(camera_status_off);
 }
 
 /**TODO
