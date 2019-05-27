@@ -323,6 +323,10 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             rt_mutex_acquire(&mutex_move, TM_INFINITE);
             move = msgRcv->GetID();
             rt_mutex_release(&mutex_move);
+        } else if(msgRcv->CompareID(MESSAGE_CAM_OPEN)){
+            camera_status_wanted = true;
+        } else if(msgRcv->CompareID(MESSAGE_CAM_CLOSE)){
+            camera_status_wanted = false;
         }
         delete(msgRcv); // mus be deleted manually, no consumer
     }
@@ -432,7 +436,7 @@ void Tasks::MoveTask(void *arg) {
 }
 
 /**
- * Write a message in a given queue
+ * @brief Write a message in a given queue
  * @param queue Queue identifier
  * @param msg Message to be stored
  */
@@ -482,9 +486,14 @@ void Tasks::GetBatteryLevel() {
     Message* battery_level;
     int rs;
     
+    cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     // Synchronization barrier (waiting that all tasks are starting)
     rt_sem_p(&sem_barrier, TM_INFINITE);
     rt_task_set_periodic(NULL, TM_NOW, 500000000);
+    
+    /**************************************************************************************/
+    /* The task starts here                                                               */
+    /**************************************************************************************/
     
     while(1){
         rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
@@ -508,45 +517,108 @@ void Tasks::GetBatteryLevel() {
 // =============== CAMERA PART ===============
 
 /*
- * Unused mutex:
- *      mutex_cameraStarted
- *      mutex_camera
- * Unused semaphores:
- *      sem_startCamera
- *      sem_openComCamera
+ * Mutex:
+ *      mutex_cameraStarted USED
+ *      mutex_camera        UNUSED
+ * Semaphores:
+ *      sem_startCamera     USED
+ *      sem_openComCamera   UNUSED
  */
 
-/**TODO
+/**TO TEST
  * Starts the camera; then wait for instruction from monitor to switch it off.
+ * @note MESSAGE_ANSWER_ACK is send to the monitor only once the camera has been effectively switched ON/OFF.
  * @param void
  * @return void
  */
 void Tasks::StartStopCam() {
     // True if on; false if off
-    bool camera_status_effective = False;
-    bool camera_status_wanted = True;
+    bool camera_status_effective = false;
+    Message* msgSend = new Message();
     
+    cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
     // Synchronization barrier (waiting that all tasks are starting)
     rt_sem_p(&sem_barrier, TM_INFINITE);
-    rt_task_set_periodic(NULL, TM_NOW, 100000000);
+    // Every quarter of second
+    rt_task_set_periodic(NULL, TM_NOW, 250000000);
     
-    while(1){
-        if(camera_status_effective = False && camera_status_wanted = True){
-            camera_status_effective = Camera.Open();
+    /**************************************************************************************/
+    /* The task starts here                                                               */
+    /**************************************************************************************/
+    
+    while(1){                
+        // Start camera
+        if(!camera_status_effective && camera_status_wanted){
+            // Starting the camera
+            cout << "Start camera...";
+            rt_sem_p(&sem_startCamera, TM_INFINITE);
+            camera_status_effective = camera.Open();
+            cout << " Camera started." << endl;
+            // Notifying monitor about camera status
+            if(camera_status_effective){
+                msgSend = new Message(MESSAGE_ANSWER_ACK);
+            } else {
+                msgSend = new Message(MESSAGE_ANSWER_NACK);
+            }
+            cout << "Notifying monitor (" << msgSend->GetID() << ")." << endl;
+            rt_mutex_acquire(&mutex_cameraStarted, TM_INFINITE);
+            WriteInQueue(&q_messageToMon, msgSend); // msgSend will be deleted by sendToMon
+            rt_mutex_release(&mutex_cameraStarted);
+            cout << "Monitor notified." << endl;
         }
         
-        Message* camera_status_on;
+        // Stop camera
+        else if(camera_status_effective && !camera_status_wanted){
+            // Stopping the camera
+            cout << "Stop camera...";
+            camera.Close();
+            camera_status_effective = -camera.IsOpen();
+            camera_status_effective = camera.Open();
+            cout << " Camera stopped." << endl;
+            // Notifying monitor about camera status
+            if(!camera_status_effective){
+                msgSend = new Message(MESSAGE_ANSWER_ACK);
+            } else {
+                msgSend = new Message(MESSAGE_ANSWER_NACK);
+            }
+            cout << "Notifying monitor (" << msgSend->GetID() << ")." << endl;
+            rt_mutex_acquire(&mutex_cameraStarted, TM_INFINITE);
+            WriteInQueue(&q_messageToMon, msgSend); // msgSend will be deleted by sendToMon
+            rt_mutex_release(&mutex_cameraStarted);
+            cout << "Monitor notified." << endl;
+        }
         
-        SendToMon(camera_status_on);
+        // When the camera is already in the state asked for, the supervisor sends back ACK.
+        else if( (camera_status_effective && camera_status_wanted) ||
+                    (!camera_status_effective && !camera_status_wanted) ){
+            Message* msgSend = new Message(MESSAGE_ANSWER_ACK);
+        }
         
+        // Else: communication error
+        else{
+            Message* msgSend = new Message(MESSAGE_ANSWER_COM_ERROR);
+        }
         
-        camera_status_wanted = ReceiveFromMon(stop_camera);
-        Camera.Close();
-        camera_status_effective = -Camera.IsOpen();
-        
-        Message* camera_status_off;
-        SendToMon(camera_status_off);
+        rt_task_wait_period(NULL);
     }
+}
+
+/**TODO
+ * Periodicaly retrieves snapshots from the camera and places it in a public memory space.
+ * @param void
+ * @return void
+ */
+void Tasks::SendImage() {
+    cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
+    // Synchronization barrier (waiting that all tasks are starting)
+    rt_sem_p(&sem_barrier, TM_INFINITE);
+    // 4 images per second
+    rt_task_set_periodic(NULL, TM_NOW, 250000000);
+    
+    /**************************************************************************************/
+    /* The task starts here                                                               */
+    /**************************************************************************************/
+    
 }
 
 /**TODO
@@ -557,15 +629,3 @@ void Tasks::StartStopCam() {
 void Tasks::SendArena() {
     
 }
-
-/**TODO
- * Periodicaly retrieves snapshots from the camera and places it in a public memory space.
- * @param void
- * @return void
- */
-void Tasks::SendImage() {
-    
-}
-
-
-// =============== ROBOT PART ===============

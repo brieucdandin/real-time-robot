@@ -64,8 +64,11 @@ private:
     /**********************************************************************/
     ComMonitor monitor;
     ComRobot robot;
+    Camera camera;
     int robotStarted = 0;
     int move = MESSAGE_ROBOT_STOP;
+    bool camera_status_wanted = false;
+    int send_image = 0;
     
     /**********************************************************************/
     /* Tasks                                                              */
@@ -160,15 +163,11 @@ private:
     
     /**
      * Starts the camera; then wait for instruction from monitor to switch it off.
+     * @note MESSAGE_ANSWER_ACK is send to the monitor only once the camera has been effectively switched ON/OFF.
      * @param void
      * @return void
      */
     void StartStopCam();
-    
-    /**
-     * 
-     */
-    void SendArena();
     
     /**
      * Periodicaly retrieves snapshots from the camera and places it in a public memory space.
@@ -176,6 +175,11 @@ private:
      * @return void
      */
     void SendImage();
+    
+    /**
+     * 
+     */
+    void SendArena();
 
 // =============== ROBOT PART ===============
     
