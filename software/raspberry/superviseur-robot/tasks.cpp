@@ -620,12 +620,12 @@ void Tasks::SendImage() {
     /**************************************************************************************/
     /* The task starts here                                                               */
     /**************************************************************************************/
-
+    
+    rt_sem_p(&sem_openComCamera, TM_INFINITE);
     while (1) {
         if(!camera.IsOpen()) {
             camera_status_effective = false;
         } else {
-            rt_sem_p(&sem_openComCamera, TM_INFINITE);
             cout << "Ask for image..." << flush;
             img = camera.Grab();
             cout << " Image received." << endl << flush;

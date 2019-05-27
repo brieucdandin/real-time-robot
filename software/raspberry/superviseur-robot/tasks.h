@@ -72,7 +72,7 @@ private:
     bool camera_status_effective = false;
     bool camera_status_wanted = false;
     int send_image = 0;
-    Image img = new Image();
+    Img img = new Img();
 
     /**********************************************************************/
     /* Tasks                                                              */
