@@ -1,0 +1,46 @@
+Procédure d'initialisation en début de scéance :
+
+0. git pull
+
+1. Paramètrage lien Raspberry
+	<Ouvrir Netbeans (ou autre IDE)>
+	Ouvrir projet "superviseur"
+	Clic droit sur le projet (dans l'arborescence) -> Properties -> Build -> BuildHost -> clic sur [...]
+		if déjà existant :
+			sélection
+		else :
+			Add -> Hostname = 10.105.1.xx
+			login = pi
+			mot de passe = insa ;
+			Access project files via = SFTP
+			Finish -> OK
+		Apply -> OK
+
+2. Build code (F11 dans Netbeans) (long la première fois)
+
+3. Lancement superviseur
+	<Ouvrir un terminal>
+	ssh pi@10.105.1.x
+	mot de passe = insa
+	sudo cd .netbeans/ (puis tab jusqu'à intersection ou bout)
+		if on utilise Netbeans :
+			à l'intersection, sélectionner dist
+			tab jusqu'au bout
+			sudo ./superviseur-robot
+		else :
+			tab jusqu'au bout
+			make (ou "sudo make")
+
+4. Édition des liens		/!\ Juste la première fois de la scéance /!\
+	<Lancer MonoDevelop>
+	Ouvrir ./dumber/software/monitor/monitor/monitor.csproj
+	<Fermer MonoDevelop>
+
+5. Lancement moniteur
+	<Ouvrir un terminal>
+	cd /software/monitor/monitor
+	./monitor
+	Server name = 10.105.1.04
+	Server port = 5544
+	Connect -> w/out watchdog -> Activate
+
