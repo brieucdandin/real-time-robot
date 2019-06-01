@@ -548,10 +548,11 @@ void Tasks::StartStopCam() {
         // Start camera
         if(!camera_status_effective && camera_status_wanted) {
             // Starting the camera
+//            cout << "============================================== DEBUG: semaphore" << endl << flush;
+//            rt_sem_p(&sem_startCamera, TM_INFINITE);
             cout << "============================================== Start camera..." << endl << flush;
-            rt_sem_p(&sem_startCamera, TM_INFINITE);
-            cout << "============================================== DEBUG" << flush;
             camera_status_effective = camera.Open();
+            rt_sem_v(&sem_startCamera);
             camera_status_effective = true;
             cout << " Camera started." << endl << flush;
             // Notifying monitor about camera status
@@ -623,9 +624,11 @@ void Tasks::SendImage() {
     /* The task starts here                                                               */
     /**************************************************************************************/
     
+    cout << "============================================== DEBUG: Semaphore SendImage." << endl << flush;
     rt_sem_p(&sem_openComCamera, TM_INFINITE);
-    rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+    cout << "============================================== Start sending images." << endl << flush;
     while (1) {
+        cout << "============================================== Camera turned off; but semaphore taken by SendImage()." << endl << flush;
         if(!camera.IsOpen()) {
             camera_status_effective = false;
         } else {
@@ -645,5 +648,5 @@ void Tasks::SendImage() {
  * @return void
  */
 void Tasks::SendArena() {
-    cout << "Verification SendArena()" << endl << flush;
+    cout << "Verification SendArena() launched" << endl << flush;
 }
