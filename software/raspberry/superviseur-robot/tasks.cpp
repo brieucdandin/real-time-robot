@@ -207,11 +207,11 @@ void Tasks::Run() {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-    if (err = rt_task_start(&th_sendArena, (void(*)(void*)) & Tasks::SendArena, this)) {
+    if (err = rt_task_start(&th_sendImage, (void(*)(void*)) & Tasks::SendImage, this)) {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-    if (err = rt_task_start(&th_sendImage, (void(*)(void*)) & Tasks::SendImage, this)) {
+    if (err = rt_task_start(&th_sendArena, (void(*)(void*)) & Tasks::SendArena, this)) {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -521,7 +521,7 @@ void Tasks::GetBatteryLevel() {
  *      mutex_camera        UNUSED
  * Semaphores:
  *      sem_startCamera     USED
- *      sem_openComCamera   UNUSED
+ *      sem_openComCamera   USED
  */
 
 /**TO TEST
@@ -548,9 +548,11 @@ void Tasks::StartStopCam() {
         // Start camera
         if(!camera_status_effective && camera_status_wanted) {
             // Starting the camera
-            cout << "Start camera..." << flush;
+            cout << "============================================== Start camera..." << endl << flush;
             rt_sem_p(&sem_startCamera, TM_INFINITE);
+            cout << "============================================== DEBUG" << flush;
             camera_status_effective = camera.Open();
+            camera_status_effective = true;
             cout << " Camera started." << endl << flush;
             // Notifying monitor about camera status
             if(camera_status_effective) {
@@ -589,9 +591,9 @@ void Tasks::StartStopCam() {
         // When the camera is already in the state asked for, the supervisor sends back ACK.
         else if( (camera_status_effective && camera_status_wanted) ||
                     (!camera_status_effective && !camera_status_wanted) ) {
-            cout << "Camera is already in the desired state." << flush;
+            cout << "Camera is already in the desired state (" << camera_status_effective << ")." << endl << flush;
             Message* msgSend = new Message(MESSAGE_ANSWER_ACK);
-            cout << "Monitor notified." << endl << flush;
+            cout << " Monitor notified." << endl << flush;
         }
 
         // Else: communication error
@@ -622,6 +624,7 @@ void Tasks::SendImage() {
     /**************************************************************************************/
     
     rt_sem_p(&sem_openComCamera, TM_INFINITE);
+    rt_mutex_acquire(&mutex_camera, TM_INFINITE);
     while (1) {
         if(!camera.IsOpen()) {
             camera_status_effective = false;
@@ -629,6 +632,7 @@ void Tasks::SendImage() {
             cout << "Ask for image..." << flush;
             img = camera.Grab();
             cout << " Image received." << endl << flush;
+            
         }
         // Wait for period
         rt_task_wait_period(NULL);
@@ -641,5 +645,5 @@ void Tasks::SendImage() {
  * @return void
  */
 void Tasks::SendArena() {
-
+    cout << "Verification SendArena()" << endl << flush;
 }

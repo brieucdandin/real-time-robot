@@ -68,11 +68,12 @@ private:
 
     int robotStarted = 0;
     int move = MESSAGE_ROBOT_STOP;
+    Img img = camera.Grab();
+    
     // True if on; false if off
     bool camera_status_effective = false;
     bool camera_status_wanted = false;
     int send_image = 0;
-    Img img = new Img();
 
     /**********************************************************************/
     /* Tasks                                                              */

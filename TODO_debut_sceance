@@ -40,7 +40,7 @@ Procédure d'initialisation en début de scéance :
 	<Ouvrir un terminal>
 	cd /software/monitor/monitor
 	./monitor
-	Server name = 10.105.1.04
+	Server name = 10.105.1.xx
 	Server port = 5544
 	Connect -> w/out watchdog -> Activate
 
