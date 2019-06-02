@@ -77,7 +77,7 @@ private:
     // Grab an image
     cout << "Ask for image..." << flush;
     rt_mutex_acquire(&mutex_image, TM_INFINITE);
-    img = camera.Grab();
+    Img img = camera.Grab();
     rt_mutex_release(&mutex_image);
 
     /**********************************************************************/
