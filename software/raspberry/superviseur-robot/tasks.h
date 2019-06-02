@@ -73,6 +73,7 @@ private:
     // True if on; false if off
     bool camera_status_effective = false;
     bool camera_status_wanted = false;
+
     bool send_image = false;
 
     /**********************************************************************/
@@ -99,7 +100,9 @@ private:
     RT_MUTEX mutex_move;
     // Created by us
     RT_MUTEX mutex_cameraStarted;
-    RT_MUTEX mutex_camera;
+    RT_MUTEX mutex_cameraToBeStarted;
+    RT_MUTEX mutex_send;
+    RT_MUTEX mutex_image;
 
     /**********************************************************************/
     /* Semaphores                                                         */

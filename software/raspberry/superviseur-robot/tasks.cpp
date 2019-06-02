@@ -77,7 +77,15 @@ void Tasks::Init() {
         cerr << "Error mutex create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-    if (err = rt_mutex_create(&mutex_camera, NULL)) {
+    if (err = rt_mutex_create(&mutex_cameraToBeStarted, NULL)) {
+        cerr << "Error mutex create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_mutex_create(&mutex_send, NULL)) {
+        cerr << "Error mutex create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_mutex_create(&mutex_image, NULL)) {
         cerr << "Error mutex create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -515,15 +523,6 @@ void Tasks::GetBatteryLevel() {
 
 // =============== CAMERA PART ===============
 
-/*
- * Mutex:
- *      mutex_cameraStarted USED
- *      mutex_camera        UNUSED
- * Semaphores:
- *      sem_startCamera     USED
- *      sem_openComCamera   USED
- */
-
 /**TO TEST
  * Starts the camera; then wait for instruction from monitor to switch it off.
  *
@@ -545,17 +544,29 @@ void Tasks::StartStopCam() {
     /**************************************************************************************/
 
     while(1) {
+        rt_mutex_acquire(&mutex_cameraStarted, TM_INFINITE);
+        rt_mutex_acquire(&mutex_cameraToBeStarted, TM_INFINITE);
         // Start camera
         if(!camera_status_effective && camera_status_wanted) {
+            rt_mutex_release(&mutex_cameraStarted);
+            rt_mutex_release(&mutex_cameraToBeStarted);
             // Starting the camera
 //            cout << "============================================== DEBUG: semaphore" << endl << flush;
 //            rt_sem_p(&sem_startCamera, TM_INFINITE);
             cout << "============================================== Start camera..." << endl << flush;
+            rt_mutex_acquire(&mutex_cameraStarted, TM_INFINITE);
             camera_status_effective = camera.Open();
+            rt_mutex_release(&mutex_cameraStarted);
             rt_sem_v(&sem_startCamera);
             cout << " Camera started." << endl << flush;
+            // Starting retrieving images periodically
+            rt_mutex_acquire(&mutex_send, TM_INFINITE);
+            send_image = true;
+            rt_mutex_release(&mutex_send);
             // Notifying monitor about camera status
+            rt_mutex_acquire(&mutex_cameraStarted, TM_INFINITE);
             if(camera_status_effective) {
+                rt_mutex_release(&mutex_cameraStarted);
                 msgSend = new Message(MESSAGE_ANSWER_ACK);
             } else {
                 msgSend = new Message(MESSAGE_ANSWER_NACK);
@@ -569,13 +580,23 @@ void Tasks::StartStopCam() {
 
         // Stop camera
         else if(camera_status_effective && !camera_status_wanted) {
+            rt_mutex_release(&mutex_cameraStarted);
+            rt_mutex_release(&mutex_cameraToBeStarted);
             // Stopping the camera
             cout << "Stopping camera..." << flush;
             camera.Close();
+            rt_mutex_acquire(&mutex_cameraStarted, TM_INFINITE);
             camera_status_effective = -camera.IsOpen();
+            rt_mutex_release(&mutex_cameraStarted);
             cout << " Camera stopped." << endl << flush;
+            // Stopping retrieving images periodically
+            rt_mutex_acquire(&mutex_send, TM_INFINITE);
+            send_image = false;
+            rt_mutex_release(&mutex_send);
             // Notifying monitor about camera status
+            rt_mutex_acquire(&mutex_cameraStarted, TM_INFINITE);
             if(!camera_status_effective) {
+                rt_mutex_release(&mutex_cameraStarted);
                 msgSend = new Message(MESSAGE_ANSWER_ACK);
             } else {
                 msgSend = new Message(MESSAGE_ANSWER_NACK);
@@ -589,6 +610,8 @@ void Tasks::StartStopCam() {
 
         // When the camera is already in the state asked for, the supervisor sends back ACK.
         else if(camera_status_effective == camera_status_wanted) {
+            rt_mutex_release(&mutex_cameraStarted);
+            rt_mutex_release(&mutex_cameraToBeStarted);
             cout << "Camera is already in the desired state (" << camera_status_effective << ")." << endl << flush;
             Message* msgSend = new Message(MESSAGE_ANSWER_ACK);
             WriteInQueue(&q_messageToMon, msgSend); // msgSend will be deleted by sendToMon
@@ -623,17 +646,21 @@ void Tasks::SendImage() {
     /* The task starts here                                                               */
     /**************************************************************************************/
 
-    cout << "============================================== DEBUG: Semaphore SendImage." << endl << flush;
+    cout << "DEBUG: Semaphore SendImage." << endl << flush;
     rt_sem_p(&sem_openComCamera, TM_INFINITE);
-    cout << "============================================== Start sending images." << endl << flush;
+    cout << "Start sending images." << endl << flush;
     while (1) {
-        cout << "============================================== Camera turned off; but semaphore taken by SendImage()." << endl << flush;
+        cout << "Camera turned off; but semaphore taken by SendImage()." << endl << flush;
+        rt_mutex_acquire(&mutex_send, TM_INFINITE);
         if(send_image) {
+            rt_mutex_release(&mutex_send);
             if(!camera.IsOpen()) {
                 camera_status_effective = false;
             } else {
                 cout << "Ask for image..." << flush;
+                rt_mutex_acquire(&mutex_image, TM_INFINITE);
                 img = camera.Grab();
+                rt_mutex_release(&mutex_image);
                 cout << " Image received." << endl << flush;
               }
         }
@@ -648,5 +675,8 @@ void Tasks::SendImage() {
  * @return void
  */
 void Tasks::SendArena() {
-    cout << "Verification SendArena() launched" << endl << flush;
+    // Stopping retrieving images periodically
+    rt_mutex_acquire(&mutex_send, TM_INFINITE);
+    send_image = false;
+    rt_mutex_release(&mutex_send);
 }
