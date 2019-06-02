@@ -628,13 +628,14 @@ void Tasks::SendImage() {
     cout << "============================================== Start sending images." << endl << flush;
     while (1) {
         cout << "============================================== Camera turned off; but semaphore taken by SendImage()." << endl << flush;
-        if(!camera.IsOpen()) {
-            camera_status_effective = false;
-        } else {
-            cout << "Ask for image..." << flush;
-            img = camera.Grab();
-            cout << " Image received." << endl << flush;
-
+        if(send_image) {
+            if(!camera.IsOpen()) {
+                camera_status_effective = false;
+            } else {
+                cout << "Ask for image..." << flush;
+                img = camera.Grab();
+                cout << " Image received." << endl << flush;
+              }
         }
         // Wait for period
         rt_task_wait_period(NULL);
