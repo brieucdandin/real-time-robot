@@ -582,17 +582,19 @@ void Tasks::StartStopCam() {
         else if(camera_status_effective && !camera_status_wanted) {
             rt_mutex_release(&mutex_cameraStarted);
             rt_mutex_release(&mutex_cameraToBeStarted);
-            // Stopping the camera
-            cout << "Stopping camera..." << flush;
-            camera.Close();
-            rt_mutex_acquire(&mutex_cameraStarted, TM_INFINITE);
-            camera_status_effective = -camera.IsOpen();
-            rt_mutex_release(&mutex_cameraStarted);
-            cout << " Camera stopped." << endl << flush;
             // Stopping retrieving images periodically
             rt_mutex_acquire(&mutex_send, TM_INFINITE);
             send_image = false;
             rt_mutex_release(&mutex_send);
+            // Stopping the camera
+            cout << "Stopping camera..." << flush;
+            rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+            camera.Close();
+            rt_mutex_release(&mutex_camera);
+            rt_mutex_acquire(&mutex_cameraStarted, TM_INFINITE);
+            camera_status_effective = -camera.IsOpen();
+            rt_mutex_release(&mutex_cameraStarted);
+            cout << " Camera stopped." << endl << flush;
             // Notifying monitor about camera status
             rt_mutex_acquire(&mutex_cameraStarted, TM_INFINITE);
             if(!camera_status_effective) {
@@ -605,7 +607,7 @@ void Tasks::StartStopCam() {
             rt_mutex_acquire(&mutex_cameraStarted, TM_INFINITE);
             WriteInQueue(&q_messageToMon, msgSend); // msgSend will be deleted by sendToMon
             rt_mutex_release(&mutex_cameraStarted);
-            cout << "Monitor notified." << endl << flush;
+            cout << " Monitor notified." << endl << flush;
         }
 
         // When the camera is already in the state asked for, the supervisor sends back ACK.
