@@ -74,7 +74,11 @@ private:
     bool camera_status_wanted = false;
 
     bool send_image = false;
-    Img img = camera.Grab();
+    // Grab an image
+    cout << "Ask for image..." << flush;
+    rt_mutex_acquire(&mutex_image, TM_INFINITE);
+    img = camera.Grab();
+    rt_mutex_release(&mutex_image);
 
     /**********************************************************************/
     /* Tasks                                                              */
@@ -99,9 +103,13 @@ private:
     RT_MUTEX mutex_robotStarted;
     RT_MUTEX mutex_move;
     // Created by us
+    // Current camera status
     RT_MUTEX mutex_cameraStarted;
+    // Desired camera status
     RT_MUTEX mutex_cameraToBeStarted;
+    // Send periodically
     RT_MUTEX mutex_send;
+    // Access to the stored image
     RT_MUTEX mutex_image;
 
     /**********************************************************************/
@@ -114,6 +122,7 @@ private:
     // Created by us
     RT_SEM sem_startCamera;
     RT_SEM sem_openComCamera;
+    RT_SEM sem_findArena;
 
     /**********************************************************************/
     /* Message queues                                                     */

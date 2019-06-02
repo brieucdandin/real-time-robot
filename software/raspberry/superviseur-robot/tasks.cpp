@@ -118,6 +118,10 @@ void Tasks::Init() {
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    if (err = rt_sem_create(&sem_findArena, NULL, 0, S_FIFO)) {
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
     cout << "Semaphores created successfully" << endl << flush;
 
     /**************************************************************************************/
@@ -543,6 +547,8 @@ void Tasks::StartStopCam() {
     /* The task starts here                                                               */
     /**************************************************************************************/
 
+    rt_sem_p(&sem_startCamera, TM_INFINITE);
+
     while(1) {
         rt_mutex_acquire(&mutex_cameraStarted, TM_INFINITE);
         rt_mutex_acquire(&mutex_cameraToBeStarted, TM_INFINITE);
@@ -550,14 +556,10 @@ void Tasks::StartStopCam() {
         if(!camera_status_effective && camera_status_wanted) {
             rt_mutex_release(&mutex_cameraStarted);
             rt_mutex_release(&mutex_cameraToBeStarted);
-            // Starting the camera
-//            cout << "============================================== DEBUG: semaphore" << endl << flush;
-//            rt_sem_p(&sem_startCamera, TM_INFINITE);
-            cout << "============================================== Start camera..." << endl << flush;
+            cout << "Start camera..." << endl << flush;
             rt_mutex_acquire(&mutex_cameraStarted, TM_INFINITE);
             camera_status_effective = camera.Open();
             rt_mutex_release(&mutex_cameraStarted);
-            rt_sem_v(&sem_startCamera);
             cout << " Camera started." << endl << flush;
             // Starting retrieving images periodically
             rt_mutex_acquire(&mutex_send, TM_INFINITE);
@@ -648,20 +650,19 @@ void Tasks::SendImage() {
     /* The task starts here                                                               */
     /**************************************************************************************/
 
-    cout << "DEBUG: Semaphore SendImage." << endl << flush;
     rt_sem_p(&sem_openComCamera, TM_INFINITE);
     cout << "Start sending images." << endl << flush;
     while (1) {
-        cout << "Camera turned off; but semaphore taken by SendImage()." << endl << flush;
         rt_mutex_acquire(&mutex_send, TM_INFINITE);
         if(send_image) {
             rt_mutex_release(&mutex_send);
             if(!camera.IsOpen()) {
                 camera_status_effective = false;
             } else {
+                // Grab an image
                 cout << "Ask for image..." << flush;
                 rt_mutex_acquire(&mutex_image, TM_INFINITE);
-                img = camera.Grab();
+                img = camera.Grab().Copy();
                 rt_mutex_release(&mutex_image);
                 cout << " Image received." << endl << flush;
               }
@@ -677,15 +678,45 @@ void Tasks::SendImage() {
  * @return void
  */
 void Tasks::SendArena() {
-    // Stopping retrieving images periodically
-    rt_mutex_acquire(&mutex_send, TM_INFINITE);
-    send_image = false;
-    rt_mutex_release(&mutex_send);
+    Arena arena;
 
-    // Code
+    cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
+    // Synchronization barrier (waiting that all tasks are starting)
+    rt_sem_p(&sem_barrier, TM_INFINITE);
 
-    // Strating retrieving images periodically again
-    rt_mutex_acquire(&mutex_send, TM_INFINITE);
-    send_image = true;
-    rt_mutex_release(&mutex_send);
+    /**************************************************************************************/
+    /* The task FindArena starts here                                                     */
+    /**************************************************************************************/
+
+    rt_sem_p(&sem_openComCamera, TM_INFINITE);
+
+    while(1) {
+        rt_mutex_acquire(&mutex_cameraStarted, TM_INFINITE);
+        rt_mutex_acquire(&mutex_send, TM_INFINITE);
+        if(camera_status_effective && send_image) {
+            rt_mutex_release(&mutex_cameraStarted);
+            rt_mutex_release(&mutex_send);
+            // Stopping retrieving images periodically
+            rt_mutex_acquire(&mutex_send, TM_INFINITE);
+            send_image = false;
+            rt_mutex_release(&mutex_send);
+            // Grab an image
+            cout << "Ask for image..." << flush;
+            rt_mutex_acquire(&mutex_image, TM_INFINITE);
+            img = camera.Grab().Copy();
+            rt_mutex_release(&mutex_image);
+            cout << " Image received." << endl << flush;
+            // 
+
+            // Starting retrieving images periodically again
+            rt_mutex_acquire(&mutex_send, TM_INFINITE);
+            send_image = true;
+            rt_mutex_release(&mutex_send);
+        } else {
+            cout << "Camera off or not sending images periodically." << endl << flush;
+            msg = new Message(MESSAGE_ANSWER_NACK);
+            WriteInQueue(&q_messageToMon, msg); // msgSend will be deleted by sendToMon
+            cout << "Monitor notified." << endl << flush;
+        }
+    }
 }
