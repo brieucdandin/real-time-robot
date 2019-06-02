@@ -68,18 +68,14 @@ private:
 
     int robotStarted = 0;
     int move = MESSAGE_ROBOT_STOP;
+    bool watchdog = false;
 
     // True if on; false if off
     bool camera_status_effective = false;
     bool camera_status_wanted = false;
 
     bool send_image = false;
-    // Grab an image
-    cout << "Ask for image..." << flush;
-    rt_mutex_acquire(&mutex_image, TM_INFINITE);
-    Img img = camera.Grab();
-    rt_mutex_release(&mutex_image);
-
+    
     /**********************************************************************/
     /* Tasks                                                              */
     /**********************************************************************/
@@ -94,6 +90,7 @@ private:
     RT_TASK th_startStopCam;
     RT_TASK th_sendArena;
     RT_TASK th_sendImage;
+    RT_TASK th_ReloadWD;
 
     /**********************************************************************/
     /* Mutex                                                              */
@@ -103,6 +100,8 @@ private:
     RT_MUTEX mutex_robotStarted;
     RT_MUTEX mutex_move;
     // Created by us
+    RT_MUTEX mutex_withWD;
+
     // Current camera status
     RT_MUTEX mutex_cameraStarted;
     // Desired camera status
@@ -123,6 +122,7 @@ private:
     RT_SEM sem_startCamera;
     RT_SEM sem_openComCamera;
     RT_SEM sem_findArena;
+    RT_SEM sem_watchDog;
 
     /**********************************************************************/
     /* Message queues                                                     */

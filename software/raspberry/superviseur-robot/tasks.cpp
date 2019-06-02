@@ -92,6 +92,10 @@ void Tasks::Init() {
         cerr << "Error mutex create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
+    if (err = rt_mutex_create(&mutex_withWD, NULL)) {
+        cerr << "Error mutex create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
     cout << "Mutexes created successfully" << endl << flush;
 
     /**************************************************************************************/
@@ -122,6 +126,10 @@ void Tasks::Init() {
         exit(EXIT_FAILURE);
     }
     if (err = rt_sem_create(&sem_findArena, NULL, 0, S_FIFO)) {
+        cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_sem_create(&sem_watchDog, NULL, 0, S_FIFO)) {
         cerr << "Error semaphore create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -167,6 +175,10 @@ void Tasks::Init() {
         exit(EXIT_FAILURE);
     }
     if (err = rt_task_create(&th_sendImage, "th_sendImage", 0, PRIORITY_TSENDIMAGE, 0)) {
+        cerr << "Error task create: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
+    if (err = rt_task_create(&th_ReloadWD, "th_ReloadWD", 0, PRIORITY_TSTARTROBOT, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
@@ -230,7 +242,10 @@ void Tasks::Run() {
         cerr << "Error task start: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-
+    if (err = rt_task_start(&th_ReloadWD, (void(*)(void*)) & Tasks::ReloadWD, this)) {
+        cerr << "Error task start: " << strerror(-err) << endl << flush;
+        exit(EXIT_FAILURE);
+    }
     cout << "Tasks launched" << endl << flush;
 }
 
@@ -323,11 +338,19 @@ void Tasks::ReceiveFromMonTask(void *arg) {
         cout << "Rcv <= " << msgRcv->ToString() << endl << flush;
 
         if (msgRcv->CompareID(MESSAGE_MONITOR_LOST)) {
+            rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
+            monitor.Close(); 
+            rt_mutex_release(&mutex_monitor);
+            cout << "communication with monitor lost " << endl;
             delete(msgRcv);
             exit(-1);
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_COM_OPEN)) {
             rt_sem_v(&sem_openComRobot);
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_START_WITHOUT_WD)) {
+            watchdog = false; 
+            rt_sem_v(&sem_startRobot);
+        } else if (msgRcv->CompareID(MESSAGE_ROBOT_START_WITH_WD)) {
+            watchdog = true;
             rt_sem_v(&sem_startRobot);
         } else if (msgRcv->CompareID(MESSAGE_ROBOT_GO_FORWARD) ||
                 msgRcv->CompareID(MESSAGE_ROBOT_GO_BACKWARD) ||
@@ -339,10 +362,18 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             move = msgRcv->GetID();
             rt_mutex_release(&mutex_move);
         } else if(msgRcv->CompareID(MESSAGE_CAM_OPEN)){
-            camera_status_wanted = true;
+            rt_sem_v(&sem_startCamera);
         } else if(msgRcv->CompareID(MESSAGE_CAM_CLOSE)){
-            camera_status_wanted = false;
+            rt_mutex_acquire(&mutex_camera, TM_INFINITE);
+            camera.Close();
+            rt_mutex_release(&mutex_camera);
+            WriteInQueue(&q_messageToMon, new Message(MESSAGE_ANSWER_ACK));
+        }else if (msgRcv->CompareID(MESSAGE_CAM_ASK_ARENA) ||
+                msgRcv->CompareID(MESSAGE_CAM_ARENA_CONFIRM) ||
+                msgRcv->CompareID(MESSAGE_CAM_ARENA_INFIRM)) {
+            WriteInQueue(&q_arena, msgRcv);
         }
+        
         delete(msgRcv); // mus be deleted manually, no consumer
     }
 }
@@ -392,13 +423,26 @@ void Tasks::StartRobotTask(void *arg) {
     /* The task startRobot starts here                                                    */
     /**************************************************************************************/
     while (1) {
-
+        bool WD ;
         Message * msgSend;
         rt_sem_p(&sem_startRobot, TM_INFINITE);
-        cout << "Start robot without watchdog (";
-        rt_mutex_acquire(&mutex_robot, TM_INFINITE);
-        msgSend = robot.Write(robot.StartWithoutWD());
-        rt_mutex_release(&mutex_robot);
+        
+        rt_mutex_acquire(&mutex_withWD, TM_INFINITE);
+        WD = watchdog;
+        rt_mutex_release(&mutex_withWD);
+        if (WD){
+            cout << "Start robot with watchdog (";
+            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+            msgSend = robot.Write(robot.StartWithWD());
+            rt_mutex_release(&mutex_robot);
+            rt_sem_v(&sem_watchDog);
+       } else {
+            cout << "Start robot without watchdog (";
+            rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+            msgSend = robot.Write(robot.StartWithoutWD());
+            rt_mutex_release(&mutex_robot);
+        }
+        
         cout << msgSend->GetID();
         cout << ")" << endl;
 
@@ -489,7 +533,6 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
  *
  */
 
-
 // =============== MONITOR PART ===============
 
 /**
@@ -527,6 +570,61 @@ void Tasks::GetBatteryLevel() {
         rt_task_wait_period(NULL);
     }
 }
+
+void Tasks::ReloadWD(void *arg) {
+
+    cout << "Start " << __PRETTY_FUNCTION__ << endl << flush;
+    // Synchronization barrier (waiting that all tasks are starting)
+    rt_sem_p(&sem_barrier, TM_INFINITE);
+    rt_sem_p(&sem_watchDog, TM_INFINITE);
+    
+    bool WD = false;
+    int cpt = 0;
+    Message *msgSend;
+     
+    /**************************************************************************************/
+    /* The task starts here                                                               */
+    /**************************************************************************************/
+    rt_task_set_periodic(NULL, TM_NOW, 1000000000);
+    
+    while (1){
+        rt_task_wait_period(NULL);         
+        rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
+        int rs = robotStarted;
+        rt_mutex_release(&mutex_robotStarted);
+        
+        if (rs == 1) {
+            rt_mutex_acquire(&mutex_withWD, TM_INFINITE);
+            WD = watchdog;
+            rt_mutex_release(&mutex_withWD);            
+            if (WD) {
+                  rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+                  Message *msg_reload = robot.Write(robot.ReloadWD());
+                  rt_mutex_release(&mutex_robot);                  
+                  if(msg_reload->GetID() == MESSAGE_ANSWER_ACK) {cpt = 0;}    
+                  else {cpt++;}  
+                }
+            
+            if (cpt > 3){
+                rt_mutex_acquire(&mutex_robotStarted, TM_INFINITE);
+                robotStarted = 0;
+                rt_mutex_release(&mutex_robotStarted);
+                
+                rt_mutex_acquire(&mutex_robot, TM_INFINITE);
+                robot.Close();
+                rt_mutex_release(&mutex_robot);
+                
+                rt_mutex_acquire(&mutex_monitor, TM_INFINITE);
+                msgSend = new Message(MESSAGE_ANSWER_COM_ERROR);
+                WriteInQueue(&q_messageToMon, msgSend);                
+                rt_mutex_release(&mutex_monitor);
+                
+                rt_sem_v(&sem_openComRobot);
+            }
+        }
+    }   
+}
+
 
 
 // =============== CAMERA PART ===============
