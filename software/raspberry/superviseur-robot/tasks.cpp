@@ -553,7 +553,6 @@ void Tasks::StartStopCam() {
             cout << "============================================== Start camera..." << endl << flush;
             camera_status_effective = camera.Open();
             rt_sem_v(&sem_startCamera);
-            camera_status_effective = true;
             cout << " Camera started." << endl << flush;
             // Notifying monitor about camera status
             if(camera_status_effective) {
@@ -574,7 +573,6 @@ void Tasks::StartStopCam() {
             cout << "Stopping camera..." << flush;
             camera.Close();
             camera_status_effective = -camera.IsOpen();
-            camera_status_effective = camera.Open();
             cout << " Camera stopped." << endl << flush;
             // Notifying monitor about camera status
             if(!camera_status_effective) {
@@ -590,10 +588,10 @@ void Tasks::StartStopCam() {
         }
 
         // When the camera is already in the state asked for, the supervisor sends back ACK.
-        else if( (camera_status_effective && camera_status_wanted) ||
-                    (!camera_status_effective && !camera_status_wanted) ) {
+        else if(camera_status_effective == camera_status_wanted) {
             cout << "Camera is already in the desired state (" << camera_status_effective << ")." << endl << flush;
             Message* msgSend = new Message(MESSAGE_ANSWER_ACK);
+            WriteInQueue(&q_messageToMon, msgSend); // msgSend will be deleted by sendToMon
             cout << " Monitor notified." << endl << flush;
         }
 
@@ -601,6 +599,7 @@ void Tasks::StartStopCam() {
         else {
             cout << "Communication error: received message that is not MESSAGE_CAM_OPEN nor MESSAGE_CAM_CLOSE." << flush;
             Message* msgSend = new Message(MESSAGE_ANSWER_COM_ERROR);
+            WriteInQueue(&q_messageToMon, msgSend); // msgSend will be deleted by sendToMon
             cout << "Monitor notified." << endl << flush;
         }
         // Wait for period
@@ -623,7 +622,7 @@ void Tasks::SendImage() {
     /**************************************************************************************/
     /* The task starts here                                                               */
     /**************************************************************************************/
-    
+
     cout << "============================================== DEBUG: Semaphore SendImage." << endl << flush;
     rt_sem_p(&sem_openComCamera, TM_INFINITE);
     cout << "============================================== Start sending images." << endl << flush;
@@ -635,7 +634,7 @@ void Tasks::SendImage() {
             cout << "Ask for image..." << flush;
             img = camera.Grab();
             cout << " Image received." << endl << flush;
-            
+
         }
         // Wait for period
         rt_task_wait_period(NULL);
