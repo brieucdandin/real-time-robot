@@ -20,12 +20,15 @@
 
 // Déclaration des priorités des taches
 #define PRIORITY_TSERVER 30
-#define PRIORITY_TOPENCOMROBOT 20
-#define PRIORITY_TMOVE 20
-#define PRIORITY_TSENDTOMON 22
 #define PRIORITY_TRECEIVEFROMMON 25
-#define PRIORITY_TSTARTROBOT 20
-#define PRIORITY_TCAMERA 21
+#define PRIORITY_TSENDTOMON 24
+#define PRIORITY_TSTARTSTOPCAM 21
+#define PRIORITY_TOPENCOMROBOT 20
+#define PRIORITY_TSENDARENA 19
+#define PRIORITY_TSTARTROBOT 15
+#define PRIORITY_TBATTERY 12
+#define PRIORITY_TMOVE 10
+#define PRIORITY_TSENDIMAGE 5
 
 /*
  * Some remarks:
@@ -151,19 +154,19 @@ void Tasks::Init() {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-    if (err = rt_task_create(&th_battery, "th_battery", 0, PRIORITY_TMOVE, 0)) {
+    if (err = rt_task_create(&th_battery, "th_battery", 0, PRIORITY_TBATTERY, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-    if (err = rt_task_create(&th_startStopCam, "th_startStopCam", 0, PRIORITY_TMOVE, 0)) {
+    if (err = rt_task_create(&th_startStopCam, "th_startStopCam", 0, PRIORITY_TSTARTSTOPCAM, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-    if (err = rt_task_create(&th_sendArena, "th_sendArena", 0, PRIORITY_TMOVE, 0)) {
+    if (err = rt_task_create(&th_sendArena, "th_sendArena", 0, PRIORITY_TSENDARENA, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
-    if (err = rt_task_create(&th_sendImage, "th_sendImage", 0, PRIORITY_TMOVE, 0)) {
+    if (err = rt_task_create(&th_sendImage, "th_sendImage", 0, PRIORITY_TSENDIMAGE, 0)) {
         cerr << "Error task create: " << strerror(-err) << endl << flush;
         exit(EXIT_FAILURE);
     }
