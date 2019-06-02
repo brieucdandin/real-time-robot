@@ -714,7 +714,7 @@ void Tasks::SendArena() {
                 // Draw arena on the image and send it to the monitor
                 img->DrawArena(arena);
                 cout << "Arena drawn on image." << endl << flush;
-                Message* msgImg = new MessageImg(MESSAGE_CAM_IMAGE,img);
+                Message* msgImg = new MessageImg(MESSAGE_CAM_IMAGE, img);
                 WriteInQueue(&q_messageToMon, msgSend); // msgSend will be deleted by sendToMon
                 cout << "Image with arena sent to Monitor." << endl << flush;
             // If arena is not found
