@@ -490,7 +490,8 @@ Message *Tasks::ReadInQueue(RT_QUEUE *queue) {
 // =============== MONITOR PART ===============
 
 /**
- * Every 500 ms, asks robot for battery level and sends it to monitor.
+ * @brief Every 500 ms, asks robot for battery level and sends it to monitor.
+ *
  * @param void
  * @return void
  */
@@ -527,8 +528,8 @@ void Tasks::GetBatteryLevel() {
 
 // =============== CAMERA PART ===============
 
-/**TO TEST
- * Starts the camera; then wait for instruction from monitor to switch it off.
+/**TODO: Test
+ * @brief Starts the camera; then wait for instruction from monitor to switch it off.
  *
  * @param void
  * @return void
@@ -546,8 +547,6 @@ void Tasks::StartStopCam() {
     /**************************************************************************************/
     /* The task starts here                                                               */
     /**************************************************************************************/
-
-    rt_sem_p(&sem_startCamera, TM_INFINITE);
 
     while(1) {
         rt_mutex_acquire(&mutex_cameraStarted, TM_INFINITE);
@@ -577,7 +576,7 @@ void Tasks::StartStopCam() {
             rt_mutex_acquire(&mutex_cameraStarted, TM_INFINITE);
             WriteInQueue(&q_messageToMon, msgSend); // msgSend will be deleted by sendToMon
             rt_mutex_release(&mutex_cameraStarted);
-            cout << "Monitor notified." << endl << flush;
+            cout << " Monitor notified." << endl << flush;
         }
 
         // Stop camera
@@ -627,15 +626,16 @@ void Tasks::StartStopCam() {
             cout << "Communication error: received message that is not MESSAGE_CAM_OPEN nor MESSAGE_CAM_CLOSE." << flush;
             Message* msgSend = new Message(MESSAGE_ANSWER_COM_ERROR);
             WriteInQueue(&q_messageToMon, msgSend); // msgSend will be deleted by sendToMon
-            cout << "Monitor notified." << endl << flush;
+            cout << " Monitor notified." << endl << flush;
         }
         // Wait for period
         rt_task_wait_period(NULL);
     }
 }
 
-/**TODO
- * Periodicaly retrieves snapshots from the camera and places it in a public memory space.
+/**TODO: Test
+ * @brief Periodicaly retrieves snapshots from the camera and places it in a public memory space.
+ *
  * @param void
  * @return void
  */
@@ -650,7 +650,6 @@ void Tasks::SendImage() {
     /* The task starts here                                                               */
     /**************************************************************************************/
 
-    rt_sem_p(&sem_openComCamera, TM_INFINITE);
     cout << "Start sending images." << endl << flush;
     while (1) {
         rt_mutex_acquire(&mutex_send, TM_INFINITE);
@@ -672,7 +671,8 @@ void Tasks::SendImage() {
     }
 }
 
-/**TODO
+/**TODO: Test & validation of arena by monitor
+ * @brief Locates the arena on an image and sends it to the monitor.
  *
  * @param void
  * @return void
@@ -687,8 +687,6 @@ void Tasks::SendArena() {
     /**************************************************************************************/
     /* The task FindArena starts here                                                     */
     /**************************************************************************************/
-
-    rt_sem_p(&sem_openComCamera, TM_INFINITE);
 
     while(1) {
         rt_mutex_acquire(&mutex_cameraStarted, TM_INFINITE);
@@ -706,8 +704,23 @@ void Tasks::SendArena() {
             img = camera.Grab().Copy();
             rt_mutex_release(&mutex_image);
             cout << " Image received." << endl << flush;
-            // 
-
+            // Look for arena
+            arena = img->SearchArena();
+            // If arena is found
+            if (!arena.IsEmpty()) {
+                // Draw arena on the image and send it to the monitor
+                img->DrawArena(arena);
+                cout << "Arena drawn on image." << endl << flush;
+                Message* msgImg = new MessageImg(MESSAGE_CAM_IMAGE,img);
+                WriteInQueue(&q_messageToMon, msgSend); // msgSend will be deleted by sendToMon
+                cout << "Image with arena sent to Monitor." << endl << flush;
+            // If arena is not found
+            } else {
+                cout << "Could not find arena." << endl << flush;
+                Message* msgSend = new Message(MESSAGE_ANSWER_NACK);
+                WriteInQueue(&q_messageToMon, msgSend); // msgSend will be deleted by sendToMon
+                cout << " Monitor notified." << endl << flush;
+            }
             // Starting retrieving images periodically again
             rt_mutex_acquire(&mutex_send, TM_INFINITE);
             send_image = true;
@@ -716,7 +729,7 @@ void Tasks::SendArena() {
             cout << "Camera off or not sending images periodically." << endl << flush;
             msg = new Message(MESSAGE_ANSWER_NACK);
             WriteInQueue(&q_messageToMon, msg); // msgSend will be deleted by sendToMon
-            cout << "Monitor notified." << endl << flush;
+            cout << " Monitor notified." << endl << flush;
         }
     }
 }
