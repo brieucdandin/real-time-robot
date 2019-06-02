@@ -679,4 +679,11 @@ void Tasks::SendArena() {
     rt_mutex_acquire(&mutex_send, TM_INFINITE);
     send_image = false;
     rt_mutex_release(&mutex_send);
+
+    // Code
+
+    // Strating retrieving images periodically again
+    rt_mutex_acquire(&mutex_send, TM_INFINITE);
+    send_image = true;
+    rt_mutex_release(&mutex_send);
 }
