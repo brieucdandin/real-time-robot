@@ -170,31 +170,25 @@ private:
 // =============== MONITOR PART ===============
 
     /**
-     * Every 500 ms, asks robot for battery level and sends it to monitor.
-     * @param void
-     * @return void
+     * @brief Every 500 ms, asks robot for battery level and sends it to monitor.
      */
     void GetBatteryLevel();
 
 // =============== CAMERA PART ===============
 
     /**
-     * Starts the camera; then wait for instruction from monitor to switch it off.
+     * @brief Starts the camera; then wait for instruction from monitor to switch it off.
      * @note MESSAGE_ANSWER_ACK is send to the monitor only once the camera has been effectively switched ON/OFF.
-     * @param void
-     * @return void
      */
     void StartStopCam();
 
     /**
-     * Periodicaly retrieves snapshots from the camera and places it in a public memory space.
-     * @param void
-     * @return void
+     * @brief Periodicaly retrieves snapshots from the camera and places it in a public memory space.
      */
     void SendImage();
 
     /**
-     *
+     * @brief Locates the arena on an image and sends it to the monitor.
      */
     void SendArena();
 
