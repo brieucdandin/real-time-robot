@@ -368,11 +368,10 @@ void Tasks::ReceiveFromMonTask(void *arg) {
             camera.Close();
             rt_mutex_release(&mutex_camera);
             WriteInQueue(&q_messageToMon, new Message(MESSAGE_ANSWER_ACK));
-        }else if (msgRcv->CompareID(MESSAGE_CAM_ASK_ARENA) ||
-                msgRcv->CompareID(MESSAGE_CAM_ARENA_CONFIRM) ||
-                msgRcv->CompareID(MESSAGE_CAM_ARENA_INFIRM)) {
-            WriteInQueue(&q_arena, msgRcv);
+        }else if (msgRcv->CompareID(MESSAGE_CAM_ASK_ARENA)){
+            rt_sem_v(sem_findArena);
         }
+               
         
         delete(msgRcv); // mus be deleted manually, no consumer
     }
